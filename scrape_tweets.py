@@ -40,13 +40,14 @@ def scrape(company_name: str,
                             'retweetcount',
                             'text',
                             'hashtags'])
-  
+    
     # OAuth for twitter API
     auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_key, access_secret)
     api = tweepy.API(auth)
 
     # API call on hashtag
+    dt_print("Start scraping tweets...")
     tweets: ItemIterator = tweepy.Cursor(api.search_tweets,
                         company_name, lang="en",
                         since_id=date_since,
@@ -79,6 +80,7 @@ def scrape(company_name: str,
                     followers, totaltweets,
                     retweetcount, text, hashtext]
         db.loc[len(db)] = ith_tweet
+        dt_print("Scraping complete.")
 
     return db
 
@@ -139,10 +141,12 @@ def sentiment_analysis(client: TextAnalyticsClient, text: str, verbose=False) ->
     return response.confidence_scores.positive, response.confidence_scores.neutral, response.confidence_scores.negative
 
 
-def calculate(df: DataFrame, client: TextAnalyticsClient) -> List[Dict]:
+def score_tweet_text(df: DataFrame, client: TextAnalyticsClient) -> List[Dict]:
     # data is a list of observations, see below
     data: List[Dict[str, Union[str, int]]] = []
 
+    dt_print("Start scoring tweets...")
+    
     for idx, row in enumerate(df.iterrows()):
         # obs(ervation) will hold all data regarding a single tweet, its key phrases and sentiment
         obs: Dict[str, Any] = {}
@@ -187,7 +191,29 @@ def calculate(df: DataFrame, client: TextAnalyticsClient) -> List[Dict]:
 
         data.append(obs)
 
+    dt_print("Tweet scoring complete.")
+
     return data
+
+
+def display_wordcloud(keyphrase_dict: Dict, sentiment):
+    # WordCloud needs all keyphrases in a string seperated by spaces
+    kp_str: str = ""
+    for kp in keyphrase_dict[sentiment]:
+        kp_str += " " + kp + " "
+
+    # create WordCloud object
+    wordcloud = WordCloud(width = 800, height = 800,
+                    background_color ='white',
+                    min_font_size = 10).generate(kp_str)
+
+    # create and display visual
+    plt.figure(figsize = (8, 8), facecolor = None)
+    plt.title(f"{sentiment.capitalize()} Topics.")
+    plt.imshow(wordcloud)
+    plt.axis("off")
+    plt.tight_layout(pad = 0)
+    plt.show()
 
 
 def get_count_by_sentiment(data: List[Dict], frequency_threshold=2, verbose=False, use_wordcloud=False):
@@ -225,7 +251,7 @@ def get_count_by_sentiment(data: List[Dict], frequency_threshold=2, verbose=Fals
         # add to dictionary
         kp_dfs[sentiment] = kp_df_sorted
 
-        dt_print(f"\{len(kp_df_sorted)} {sentiment} key phrases found with a frequency of at least {frequency_threshold}.")
+        dt_print(f"{len(kp_df_sorted)} {sentiment} key phrases found with a frequency of at least {frequency_threshold}.")
 
         # get current time for file paths
         dt = datetime.now()
@@ -241,34 +267,18 @@ def get_count_by_sentiment(data: List[Dict], frequency_threshold=2, verbose=Fals
             print(kp_df_sorted.head(10))
 
         if use_wordcloud:
-            # WordCloud needs all keyphrases in a string seperated by spaces
-            kp_str: str = ""
-            for kp in kp_by_sentiment[sentiment]:
-                kp_str += " " + kp + " "
-
-            # create WordCloud object
-            wordcloud = WordCloud(width = 800, height = 800,
-                            background_color ='white',
-                            min_font_size = 10).generate(kp_str)
-
-            # create and display visual
-            plt.figure(figsize = (8, 8), facecolor = None)
-            plt.title(f"{sentiment.capitalize()} Topics.")
-            plt.imshow(wordcloud)
-            plt.axis("off")
-            plt.tight_layout(pad = 0)
-            plt.show()
+            display_wordcloud(kp_by_sentiment, sentiment)
 
 
 if __name__ == '__main__':
     # name of the hashtag to filter on
-    company_name = "test"
+    company_name = "microsoft"
 
     # get tweets starting from this date, in yyyy-MM-dd format as string
     date_since = "2022-01-01"
 
     # number of tweets to pull
-    num_tweet = 1
+    num_tweet = 1000
 
     # Twitter API credentials
     consumer_key: str = os.environ["CONSUMER_KEY"]
@@ -284,6 +294,6 @@ if __name__ == '__main__':
 
     client: TextAnalyticsClient = authenticate_client(key, endpoint)
 
-    data: List[Dict] = calculate(df_tweets, client)
+    data: List[Dict] = score_tweet_text(df_tweets, client)
     
-    get_count_by_sentiment(data)
+    get_count_by_sentiment(data, use_wordcloud=False)
