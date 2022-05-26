@@ -9,7 +9,7 @@ The solution will extract text from the tweets and send to two Azure Cognitive S
 - key phrase extraction
 - sentiment analysis
 
-For every given hashtag, a local directory is created containing three subdirectories, one for each sentiment:
+For every given hashtag, a local folder is created in the data directory, containing three subdirectories, one for each sentiment:
 - positive
 - neutral
 - negative

@@ -80,7 +80,8 @@ def scrape(company_name: str,
                     followers, totaltweets,
                     retweetcount, text, hashtext]
         db.loc[len(db)] = ith_tweet
-        dt_print("Scraping complete.")
+
+    dt_print("Scraping complete.")
 
     return db
 
@@ -257,9 +258,9 @@ def get_count_by_sentiment(data: List[Dict], frequency_threshold=2, verbose=Fals
         dt = datetime.now()
 
         # create output path if not exists
-        if not os.path.exists(f"{company_name}/{sentiment}_tweets"): os.makedirs(f"{company_name}/{sentiment}_tweets")
+        if not os.path.exists(f"data/{company_name}/{sentiment}_tweets"): os.makedirs(f"{company_name}/{sentiment}_tweets")
 
-        output_filename: str = f"{company_name}/{sentiment}_tweets/{sentiment}_{dt.year}{dt.month:02d}{dt.day:02d}-{dt.hour:02d}{dt.minute:02d}{dt.second:02d}.csv"
+        output_filename: str = f"data/{company_name}/{sentiment}_tweets/{sentiment}_{dt.year}{dt.month:02d}{dt.day:02d}-{dt.hour:02d}{dt.minute:02d}{dt.second:02d}.csv"
 
         kp_df_sorted.to_csv(output_filename, index=False)
 
@@ -272,7 +273,7 @@ def get_count_by_sentiment(data: List[Dict], frequency_threshold=2, verbose=Fals
 
 if __name__ == '__main__':
     # name of the hashtag to filter on
-    company_name = "microsoft"
+    company_name = "mcdonalds"
 
     # get tweets starting from this date, in yyyy-MM-dd format as string
     date_since = "2022-01-01"
@@ -296,4 +297,4 @@ if __name__ == '__main__':
 
     data: List[Dict] = score_tweet_text(df_tweets, client)
     
-    get_count_by_sentiment(data, use_wordcloud=False)
+    get_count_by_sentiment(data, use_wordcloud=True)
